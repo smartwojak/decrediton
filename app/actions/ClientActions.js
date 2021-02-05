@@ -3,6 +3,7 @@ import * as wallet from "wallet";
 import { onAppReloadRequested, getDcrwalletGrpcKeyCert } from "wallet";
 import * as sel from "selectors";
 import eq from "lodash/fp/eq";
+import isUndefined from "lodash/fp/isUndefined";
 import {
   getNextAddressAttempt,
   getPeerInfo,
@@ -39,6 +40,7 @@ import {
   VSP_FEE_PROCESS_STARTED,
   VSP_FEE_PROCESS_PAID
 } from "constants";
+import * as cfgConstants from "constants/config";
 
 export const goToTransactionHistory = () => (dispatch) => {
   dispatch(pushHistory("/transactions/history"));
@@ -466,7 +468,7 @@ export function hideAccount(accountNumber) {
       updatedHiddenAccounts.push(accountNumber);
     }
     const cfg = getWalletCfg(sel.isTestNet(getState()), walletName);
-    cfg.set("hiddenaccounts", updatedHiddenAccounts);
+    cfg.set(cfgConstants.HIDDEN_ACCOUNTS, updatedHiddenAccounts);
     dispatch({
       hiddenAccounts: updatedHiddenAccounts,
       type: UPDATEHIDDENACCOUNTS
@@ -487,7 +489,7 @@ export function showAccount(accountNumber) {
       }
     }
     const cfg = getWalletCfg(sel.isTestNet(getState()), walletName);
-    cfg.set("hiddenaccounts", updatedHiddenAccounts);
+    cfg.set(cfgConstants.HIDDEN_ACCOUNTS, updatedHiddenAccounts);
     dispatch({
       hiddenAccounts: updatedHiddenAccounts,
       type: UPDATEHIDDENACCOUNTS
@@ -685,6 +687,9 @@ export const showTicketList = (status) => (dispatch) =>
 export const showPurchaseTicketsPage = () => (dispatch) =>
   dispatch(pushHistory("/tickets/purchase"));
 
+export const showListUtxo = () => (dispatch) =>
+  dispatch(pushHistory("/listUtxo"));
+
 export const goBackHistory = () => (dispatch) => dispatch(goBack());
 
 export const SEEDCOPIEDTOCLIPBOARD = "SEEDCOPIEDTOCLIPBOARD";
@@ -764,12 +769,12 @@ export const getMixerAcctsSpendableBalances = () => async (
   const mixedAccount = sel.getMixedAccount(getState());
   const changeAccount = sel.getChangeAccount(getState());
   const balances = {};
-  if (mixedAccount) {
+  if (!isUndefined(mixedAccount)) {
     balances.mixedAccountSpendableBalance = await dispatch(
       getAcctSpendableBalance(mixedAccount)
     );
   }
-  if (changeAccount) {
+  if (!isUndefined(changeAccount)) {
     balances.changeAccountSpendableBalance = await dispatch(
       getAcctSpendableBalance(changeAccount)
     );

@@ -16,12 +16,15 @@ import {
   OPENWALLET_INPUT,
   OPENWALLET_INPUTPRIVPASS
 } from "actions/WalletLoaderActions";
+import { IMMATURE, LIVE, UNMINED } from "constants/Decrediton";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useDaemonStartup } from "hooks";
+import { useDaemonStartup, useAccounts } from "hooks";
 import { useMachine } from "@xstate/react";
 import { getStartedMachine } from "stateMachines/GetStartedStateMachine";
 import { AdvancedStartupBody } from "./AdvancedStartup/AdvancedStartup";
 import SettingMixedAccount from "./SetMixedAcctPage/SetMixedAcctPage";
+import ProcessUnmanagedTickets from "./ProcessUnmanagedTickets/ProcessUnmanagedTickets";
+import ProcessManagedTickets from "./ProcessManagedTickets/ProcessManagedTickets";
 
 // XXX these animations classes are passed down to AnimatedLinearProgressFull
 // and styling defined in Loading.less and need to handled when loading.less
@@ -63,16 +66,25 @@ export const useGetStarted = () => {
     onShowTutorial,
     appVersion,
     syncAttemptRequest,
-    onGetDcrdLogs
+    onGetDcrdLogs,
+    daemonWarning,
+    getCoinjoinOutputspByAcct,
+    onProcessUnmanagedTickets,
+    onProcessManagedTickets,
+    stakeTransactions
   } = useDaemonStartup();
+  const { mixedAccount } = useAccounts();
   const [PageComponent, setPageComponent] = useState(null);
+  const [showNavLinks, setShowNavLinks] = useState(true);
   const [state, send] = useMachine(getStartedMachine, {
     actions: {
       isAtPreStart: () => {
         console.log("is at pre start");
         preStartDaemon();
       },
-      isAtStartAdvancedDaemon: () => {},
+      isAtStartAdvancedDaemon: () => { },
+      isAtLoadingConfig: () => { },
+      isAtSettingAccount: () => { },
       isAtStartSPV: () => onSendContinue(),
       isAtStartingDaemon: (_, event) => {
         console.log("is at Starting Daemonn");
@@ -99,7 +111,9 @@ export const useGetStarted = () => {
         const { isAdvancedDaemon } = context;
         // We send the user to the error page if decrediton is not in advanced mode.
         if (!isAdvancedDaemon) {
-          return goToErrorPage();
+          // race because of react-router Redirect on /getStarted
+          // this timeout solves it.
+          return setTimeout(() => goToErrorPage(), 500);
         }
         send({ type: "START_ADVANCED_DAEMON", payload: { error } });
       },
@@ -198,7 +212,7 @@ export const useGetStarted = () => {
           });
       },
       isSyncingRPC: async (context) => {
-        const { passPhrase, isPrivacy, isSPV } = context;
+        const { passPhrase, isSPV } = context;
         if (syncAttemptRequest) {
           return;
         }
@@ -210,16 +224,7 @@ export const useGetStarted = () => {
         }
         if (isSPV) {
           return startSPVSync(passPhrase)
-            .then(() => {
-              if (isPrivacy) {
-                // if recoverying a privacy wallet, we go to settingMixedAccount
-                // state, so the user can set a mixed account based on their
-                // coinjoin outputs.
-                // This state should only be achievable if recoverying wallet.
-                send({ type: "SET_MIXED_ACCOUNT" });
-              }
-              send({ type: "GO_TO_HOME_VIEW" });
-            })
+            .then(() => send({ type: "SET_MIXED_ACCOUNT" }))
             .catch((error) => {
               // If the error is OPENWALLET_INPUTPRIVPASS, the wallet needs the
               // private passphrase to discover accounts and the user typed a wrong
@@ -227,7 +232,6 @@ export const useGetStarted = () => {
               if (error == OPENWALLET_INPUTPRIVPASS) {
                 send({ type: "WALLET_DISCOVERACCOUNTS_PASS" });
               }
-
               send({ type: "ERROR_SYNCING_WALLET", payload: { error } });
             });
         }
@@ -241,18 +245,88 @@ export const useGetStarted = () => {
             }
             throw error;
           }
-
-          if (isPrivacy) {
-            // if recoverying a privacy wallet, we go to settingMixedAccount
-            // state, so the user can set a mixed account based on their
-            // coinjoin outputs.
-            // This state should only be achievable if recoverying wallet.
-            send({ type: "SET_MIXED_ACCOUNT" });
-          }
-          // if it is not privacy we can simply go to home view.
-          send({ type: "GO_TO_HOME_VIEW" });
+          send({ type: "SET_MIXED_ACCOUNT" });
         } catch (error) {
           send({ type: "ERROR_SYNCING_WALLET", payload: { error } });
+        }
+      },
+      isAtSyncingVSPTickets: async (context) => {
+        const { isCreateNewWallet, passPhrase } = context;
+        // isCreateNewWallet needs to be false for indicating a wallet
+        // restore. Can be other cases if it is null or undefined.
+        const { selectedWallet } = context;
+        let { isWatchingOnly, isTrezor } = selectedWallet;
+        const val = selectedWallet.value;
+        if (val) {
+          if (!isWatchingOnly) isWatchingOnly = val.isWatchingOnly;
+          if (!isTrezor) isTrezor = val.isTrezor;
+        }
+        // Watching only wallets can not sync tickets as they need signing.
+        if (isWatchingOnly || isTrezor) {
+          send({ type: "FINISH" });
+          return;
+        }
+        if (isCreateNewWallet === false) {
+          await onProcessManagedTickets(passPhrase);
+          onSendContinue();
+        } else {
+          onSendContinue();
+          // goToHome();
+        }
+      },
+      // processingUnmanagedTickets process solo tickets and must be called
+      // after processingManagedTickets.
+      isAtProcessingUnmanagedTickets: () => {
+        console.log("is at processingUnmanagedTickets");
+        let hasSoloTickets = false;
+        Object.keys(stakeTransactions).forEach((hash) => {
+          const tx = stakeTransactions[hash];
+          // check if it is a spendable ticket.
+          if (
+            tx.status === IMMATURE ||
+            tx.status === LIVE ||
+            tx.status === UNMINED
+          ) {
+            // On old vsp the fee is an input. So if the tx has more than one
+            // input, it means it is an old vsp ticket and have no feeStatus.
+            // So we can skip it.
+            if (tx.txInputs.length !== 1) {
+              return;
+            }
+            // feeStatus can be 0.
+            if (!tx.feeStatus && tx.feeStatus !== 0) {
+              hasSoloTickets = true;
+            }
+          }
+        });
+        if (!hasSoloTickets) {
+          // sending back goes to home page.
+          send({ type: "BACK" });
+        }
+      },
+      // processingManagedTickets process vsp tickets updating its status.
+      isAtProcessingManagedTickets: () => {
+        console.log("is at isAtProcessingManagedTickets");
+        const hasLive = Object.keys(stakeTransactions).some((hash) => {
+          const tx = stakeTransactions[hash];
+          // check if the wallet has at least one vsp live ticket.
+          if (
+            tx.status === IMMATURE ||
+            tx.status === LIVE ||
+            tx.status === UNMINED
+          ) {
+            // On old vsp the fee is an input. So if the tx has more than one
+            // input, it means it is an old vsp ticket and have no feeStatus.
+            // So we can skip it.
+            if (tx.txInputs.length !== 1) {
+              return false;
+            }
+            return true;
+          }
+        });
+        // if no live tickets, we can skip it.
+        if (!hasLive) {
+          onSendBack();
         }
       },
       isAtFinishMachine: () => goToHome()
@@ -321,9 +395,15 @@ export const useGetStarted = () => {
     });
   }, [send, getDaemonSynced, getSelectedWallet, isAdvancedDaemon, isSPV]);
 
-  const onSendContinue = useCallback(() => send({ type: "CONTINUE" }), [send]);
+  const onSendContinue = useCallback(() => {
+    send({ type: "CONTINUE" });
+    setShowNavLinks(false);
+  }, [send]);
 
-  const onSendBack = useCallback(() => send({ type: "BACK" }), [send]);
+  const onSendBack = useCallback(() => {
+    send({ type: "BACK" });
+    setShowNavLinks(true);
+  }, [send]);
 
   const onSendError = useCallback((error) => send({ type: "ERROR", error }), [
     send
@@ -345,13 +425,12 @@ export const useGetStarted = () => {
   );
 
   const onShowCreateWallet = useCallback(
-    ({ isNew, walletMasterPubKey, isTrezor, isPrivacy }) =>
+    ({ isNew, walletMasterPubKey, isTrezor }) =>
       send({
         type: "SHOW_CREATE_WALLET",
         isNew,
         walletMasterPubKey,
-        isTrezor,
-        isPrivacy
+        isTrezor
       }),
     [send]
   );
@@ -439,8 +518,8 @@ export const useGetStarted = () => {
                 m="Choose a wallet to open in SPV mode"
               />
             ) : (
-              <T id="loaderBar.choosingWallet" m="Choose a wallet to open" />
-            );
+                <T id="loaderBar.choosingWallet" m="Choose a wallet to open" />
+              );
             component = h(WalletSelection, {
               onSendCreateWallet,
               submitChosenWallet,
@@ -451,11 +530,11 @@ export const useGetStarted = () => {
             text = isCreateNewWallet ? (
               <T id="loaderBar.preCreateWalletCreate" m="Create a wallet..." />
             ) : (
-              <T
-                id="loaderBar.preCreateWalletRestore"
-                m="Restore a Wallet..."
-              />
-            );
+                <T
+                  id="loaderBar.preCreateWalletRestore"
+                  m="Restore a Wallet..."
+                />
+              );
             component = h(PreCreateWalletForm, {
               onShowCreateWallet,
               onSendContinue,
@@ -507,6 +586,7 @@ export const useGetStarted = () => {
           onShowTutorial,
           appVersion,
           onGetDcrdLogs,
+          daemonWarning,
           // if updated* is set, we use it, as it means it is called by the componentDidUpdate.
           text: updatedText ? updatedText : text,
           animationType: updatedAnimationType
@@ -528,15 +608,119 @@ export const useGetStarted = () => {
         PageComponent = h(ReleaseNotes, { onSendBack });
       }
       if (key === "creatingWallet") {
-        PageComponent = h(CreateWalletMachine, { createWalletRef, isTestNet });
+        PageComponent = h(CreateWalletMachine, {
+          createWalletRef,
+          isTestNet,
+          onSendBack
+        });
       }
       if (key === "settingMixedAccount") {
-        PageComponent = h(SettingMixedAccount, { onSendBack, onSendContinue });
+        // Display a message while checking for coinjoin outputs and go to set
+        // mixed account only if coinjoin outputs found & mixed account not set yet
+        animationType = establishingRpc;
+        text = (
+          <T
+            id="loaderBar.checkingMixedAccount"
+            m="Seaching for coinjoin transactions..."
+          />
+        );
+        PageComponent = h(GetStartedMachinePage, {
+          text: updatedText ? updatedText : text,
+          animationType: updatedAnimationType
+            ? updatedAnimationType
+            : animationType,
+          StateComponent: updatedComponent ? updatedComponent : component
+        });
+        getCoinjoinOutputspByAcct()
+          .then((outputsByAcctMap) => {
+            const hasMixedOutputs = outputsByAcctMap && outputsByAcctMap.reduce(
+              (foundMixed, { coinjoinSum }) => coinjoinSum > 0 || foundMixed,
+              false
+            );
+            if (!hasMixedOutputs || mixedAccount) {
+              onSendContinue();
+            } else {
+              PageComponent = h(SettingMixedAccount, {
+                cancel: onSendContinue,
+                onSendContinue
+              });
+              setPageComponent(PageComponent);
+            }
+          })
+          .catch((err) => console.log(err));
+      }
+      if (key === "syncVSPTickets") {
+        // Display a message while checking for tickets to be synced.
+        animationType = establishingRpc;
+        text = (
+          <T
+            id="loaderBar.syncingTickets"
+            m="Seaching for unsynced tickets transactions..."
+          />
+        );
+        PageComponent = h(GetStartedMachinePage, {
+          text: updatedText ? updatedText : text,
+          animationType: updatedAnimationType
+            ? updatedAnimationType
+            : animationType,
+          StateComponent: updatedComponent ? updatedComponent : component
+        });
+      }
+      if (key === "processingUnmanagedTickets") {
+        PageComponent = h(ProcessUnmanagedTickets, {
+          onSendContinue,
+          onProcessTickets: onProcessUnmanagedTickets,
+          cancel: onSendBack,
+          title: <T id="getstarted.processUnmangedTickets.title" m="Process Unmanaged Tickets" />,
+          description: <T
+          id="getstarted.processUnmangedTickets.description"
+          m={`Looks like you have vsp ticket with unprocessed fee. If they are picked
+              to vote and they are not linked with a vsp, they may miss, if you are not
+              properly dealing with solo vote.`}
+        />
+        });
+      }
+      if (key === "processingManagedTickets") {
+        PageComponent = h(ProcessManagedTickets, {
+          onSendContinue,
+          send,
+          cancel: onSendBack,
+          onProcessTickets: onProcessManagedTickets,
+          title: <T id="getstarted.processManagedTickets.title" m="Process Managed Tickets" />,
+          noVspSelection: true,
+          description: <T
+          id="getstarted.processManagedTickets.description"
+          m={ `Your wallet appears to have live tickets. Processing managed
+            tickets confirms with the VSPs that all of your submitted tickets
+            are currently known and paid for by the VSPs.`
+          }
+        />
+        });
+      }
+      // XXX
+      // use this loading state on settingMixedAccount as well.
+      if (key === "isLoadingConfig") {
+        animationType = establishingRpc;
+        text = (
+          <T
+            id="loaderBar.checkingMixedAccount"
+            m="Seaching for coinjoin transactions..."
+          />
+        );
+        PageComponent = h(GetStartedMachinePage, {
+          text: updatedText ? updatedText : text,
+          animationType: updatedAnimationType
+            ? updatedAnimationType
+            : animationType,
+          StateComponent: updatedComponent ? updatedComponent : component
+        });
       }
 
       setPageComponent(PageComponent);
     },
     [
+      getCoinjoinOutputspByAcct,
+      mixedAccount,
       state,
       isTestNet,
       onSendBack,
@@ -555,7 +739,11 @@ export const useGetStarted = () => {
       onGetDcrdLogs,
       onSendDiscoverAccountsPassInput,
       onSendSetPassphrase,
-      error
+      error,
+      daemonWarning,
+      onProcessUnmanagedTickets,
+      onProcessManagedTickets,
+      send
     ]
   );
 
@@ -626,6 +814,7 @@ export const useGetStarted = () => {
     onShowSettings,
     updateAvailable,
     isTestNet,
-    PageComponent
+    PageComponent,
+    showNavLinks
   };
 };

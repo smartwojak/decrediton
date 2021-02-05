@@ -26,7 +26,7 @@ const PrivacyInfo = () => {
       />
       <div
         className={classNames(
-          styles.privacyInfoReadMoreIcon,
+          styles.readMoreIcon,
           show && styles.active
         )}
       />
@@ -96,6 +96,7 @@ export function PurchasePage({
   setVSP,
   vsp,
   vspFee,
+  setVspFee,
   isValid,
   toggleIsLegacy,
   onV3PurchaseTicket,
@@ -144,6 +145,7 @@ export function PurchasePage({
             setVSP,
             vsp,
             vspFee,
+            setVspFee,
             isValid,
             onV3PurchaseTicket,
             isLoading,

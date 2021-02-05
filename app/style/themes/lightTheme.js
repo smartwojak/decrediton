@@ -135,6 +135,12 @@ const lightTheme = {
   "mixer-settings-label": "#0C1E3E",
   "mixer-settings-disabled": "#8997A5",
 
+  // override pi-ui's tab colors
+  "tab-default-color": "transparent", // default border
+  "tab-active-background": "var(--background-back-color)",
+  "tab-text-active-color": "var(--input-color-default)",
+  "tab-text-color": "var(--sidebar-menu-link)",
+
   /* icons */
   "menu-settings": "url('style/icons/menuSettings.svg')",
   "menu-accounts": "url('style/icons/accounts-active.png')",
@@ -242,7 +248,8 @@ const lightTheme = {
   "decentralized-loop-still": "url('style/icons/decentralizedLoopStill.svg')",
   "decentralized-loop-animation":
     "url('style/icons/decentralizedLoopAnimation.gif')",
-  "self-transaction-icon": "url('style/icons/sentToSelfTx.svg')"
+  "self-transaction-icon": "url('style/icons/sentToSelfTx.svg')",
+  "proposals-refresh-icon": "url('style/icons/MixerDark.svg')"
 };
 
 export default lightTheme;

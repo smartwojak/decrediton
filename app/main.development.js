@@ -88,10 +88,11 @@ import {
   TESTNET,
   MAINNET
 } from "constants";
-import { DAEMON_ADVANCED, LOCALE } from "constants/config";
+import { DAEMON_ADVANCED, LOCALE, DISABLE_HARDWARE_ACCEL } from "constants/config";
 
 // setPath as decrediton
 app.setPath("userData", getAppDataDirectory());
+app.allowRendererProcessReuse = false;
 
 const argv = parseArgs(process.argv.slice(1), OPTIONS);
 const debug = argv.debug || process.env.NODE_ENV === "development";
@@ -120,7 +121,7 @@ const daemonIsAdvanced = argv.advanced || globalCfg.get(DAEMON_ADVANCED);
 const walletsDirectory = getWalletsDirectoryPath();
 const mainnetWalletsPath = getWalletsDirectoryPathNetwork(false);
 const testnetWalletsPath = getWalletsDirectoryPathNetwork(true);
-if (globalCfg.get("disable_hardware_accel")) {
+if (globalCfg.get(DISABLE_HARDWARE_ACCEL)) {
   logger.log("info", "Disabling hardware acceleration");
   app.disableHardwareAcceleration();
 }
@@ -301,8 +302,8 @@ ipcMain.on("remove-wallet", (event, walletPath, testnet) => {
   event.returnValue = removeWallet(testnet, walletPath);
 });
 
-ipcMain.handle("upload-firmware", async (event, firmware) => {
-  const res = await updateTrezorFirmware(firmware);
+ipcMain.handle("upload-firmware", async (event, firmware, model) => {
+  const res = await updateTrezorFirmware(firmware, model);
   return res;
 });
 

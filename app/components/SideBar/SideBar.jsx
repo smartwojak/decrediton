@@ -28,7 +28,8 @@ const SideBar = () => {
     isSPV,
     peersCount,
     accountsListRef,
-    onAccountsListWheel
+    onAccountsListWheel,
+    uiAnimations
   } = useSideBar();
   const { rescanAttempt, rescanCancel } = useRescan();
 
@@ -36,6 +37,7 @@ const SideBar = () => {
     <div
       className={classNames(
         style.sidebar,
+        uiAnimations && style.animated,
         !expandSideBar && style.sidebarReduced,
         !expandSideBar && sidebarOnBottom && style.sidebarOnBottom
       )}>
@@ -55,9 +57,7 @@ const SideBar = () => {
           style.sidebarMain,
           isShowingAccounts && style.isShowingAccounts
         )}>
-        <div className={style.sidebarScroll}>
-          <MenuLinks />
-        </div>
+        <MenuLinks />
         <AccountsList
           {...{
             isShowingAccounts,

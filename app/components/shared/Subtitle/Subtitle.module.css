@@ -5,6 +5,7 @@
   margin-bottom: 17px;
   margin-left: 0;
   width: 740px;
+  clear: both;
 }
 
 .tabbedPageSubtitle.export {
@@ -14,7 +15,7 @@
 @media screen and (max-width: 1179px) {
   .tabbedPageSubtitle {
     margin-left: 0;
-    width: 630px;
+    width: 667px;
   }
 }
 

@@ -72,6 +72,7 @@ const fillVoteSummary = (proposal, voteSummary, blockTimestampFromNow) => {
     : 60;
   proposal.quorumMinimumVotes = Math.round(eligibleVotes * (quorum / 100));
   proposal.voteStatus = voteSummary.status;
+  proposal.approved = voteSummary.approved;
 
   if (totalVotes > proposal.quorumMinimumVotes) {
     proposal.quorumPass = true;
@@ -147,8 +148,6 @@ const updateInventoryFromApiData = (data) => {
 export const GETTOKEN_INVENTORY_ATTEMPT = "GETTOKEN_INVENTORY_ATTEMPT";
 export const GETTOKEN_INVENTORY_SUCCESS = "GETTOKEN_INVENTORY_SUCCESS";
 export const GETTOKEN_INVENTORY_FAILED = "GETTOKEN_INVENTORY_FAILED";
-
-export const cleanupPoliteiaCSRF = () => () => pi.cleanupCSRF();
 
 const getTokenInventory = () => async (dispatch, getState) => {
   dispatch({ type: GETTOKEN_INVENTORY_ATTEMPT });

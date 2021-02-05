@@ -17,13 +17,11 @@ import {
   getTokenAndInitialBatch,
   resetInventoryAndProposals
 } from "actions/GovernanceActions";
-import { cleanupPoliteiaCSRF } from "./GovernanceActions";
 import * as configConstants from "constants/config";
 
 export const SETTINGS_SAVE = "SETTINGS_SAVE";
 export const SETTINGS_CHANGED = "SETTINGS_CHANGED";
 export const SETTINGS_UNCHANGED = "SETTINGS_UNCHANGED";
-export const SETTINGS_TOGGLE_THEME = "SETTINGS_TOGGLE_THEME";
 
 export const saveSettings = (settings) => async (dispatch, getState) => {
   const {
@@ -35,41 +33,37 @@ export const saveSettings = (settings) => async (dispatch, getState) => {
 
   const config = getGlobalCfg();
   const oldAllowedExternalRequests = config.get(
-    configConstants.ALLOW_EXTERNAL_REQUEST
+    configConstants.ALLOWED_EXTERNAL_REQUESTS
   );
-  const oldTheme = config.get(configConstants.THEME);
   const updatedProxy =
     config.get(configConstants.PROXY_TYPE) !== settings.proxyType ||
     config.get(configConstants.PROXY_LOCATION) !== settings.proxyLocation;
 
   config.set(configConstants.LOCALE, settings.locale);
   config.set(configConstants.DAEMON_ADVANCED, settings.daemonStartAdvanced);
+  config.set(configConstants.PROXY_TYPE, settings.proxyType);
   config.set(
-    configConstants.ALLOW_EXTERNAL_REQUEST,
+    configConstants.ALLOWED_EXTERNAL_REQUESTS,
     settings.allowedExternalRequests
   );
-  config.set(configConstants.PROXY_TYPE, settings.proxyType);
   config.set(configConstants.PROXY_LOCATION, settings.proxyLocation);
   config.set(configConstants.TIMEZONE, settings.timezone);
   config.set(configConstants.SPV_MODE, settings.spvMode);
   config.set(configConstants.SPV_CONNECT, settings.spvConnect);
   config.set(configConstants.NETWORK, settings.network);
   config.set(configConstants.THEME, settings.theme);
+  config.set(configConstants.UI_ANIMATIONS, settings.uiAnimations);
 
   if (walletName) {
     const walletConfig = getWalletCfg(isTestNet(getState()), walletName);
-    walletConfig.set("currency_display", settings.currencyDisplay);
-    walletConfig.set("gaplimit", settings.gapLimit);
+    walletConfig.set(configConstants.CURRENCY_DISPLAY, settings.currencyDisplay);
+    walletConfig.set(configConstants.GAP_LIMIT, settings.gapLimit);
   }
 
   if (
     !equalElements(oldAllowedExternalRequests, settings.allowedExternalRequests)
   ) {
     wallet.reloadAllowedExternalRequests();
-  }
-
-  if (oldTheme != settings.theme) {
-    dispatch({ theme: settings.theme, type: SETTINGS_TOGGLE_THEME });
   }
 
   const newDcrdataEnabled =
@@ -88,8 +82,6 @@ export const saveSettings = (settings) => async (dispatch, getState) => {
   }
 
   if (needNetworkReset) {
-    // we need to cleanup politeia's csrf as this info is network specific.
-    dispatch(cleanupPoliteiaCSRF());
     dispatch(closeWalletRequest());
     await dispatch(closeDaemonRequest());
     dispatch(backToCredentials());
@@ -113,12 +105,12 @@ export const addAllowedExternalRequest = (requestType) => (
 ) =>
   new Promise((resolve, reject) => {
     const config = getGlobalCfg();
-    const allowed = config.get(configConstants.ALLOW_EXTERNAL_REQUEST);
+    const allowed = config.get(configConstants.ALLOWED_EXTERNAL_REQUESTS);
 
     if (allowed.indexOf(requestType) > -1) return reject(false);
 
     allowed.push(requestType);
-    config.set(configConstants.ALLOW_EXTERNAL_REQUEST, allowed);
+    config.set(configConstants.ALLOWED_EXTERNAL_REQUESTS, allowed);
     wallet.allowExternalRequest(requestType);
 
     const {
@@ -175,10 +167,10 @@ export function updateStateSettingsChanged(settings, norestart) {
         );
       newDiffersFromCurrent
         ? dispatch({
-            tempSettings: newSettings,
-            needNetworkReset,
-            type: SETTINGS_CHANGED
-          })
+          tempSettings: newSettings,
+          needNetworkReset,
+          type: SETTINGS_CHANGED
+        })
         : dispatch({ tempSettings: currentSettings, type: SETTINGS_UNCHANGED });
     }
   };
@@ -196,7 +188,7 @@ export const updateStateVoteSettingsChanged = (settings) => (
   } = getState();
   if (settings.enableTicketBuyer !== tempSettings.enableTicketBuyer) {
     const config = getWalletCfg(isTestNet(getState()), walletName);
-    config.set("enableticketbuyer", settings.enableTicketBuyer);
+    config.set(configConstants.ENABLE_TICKET_BUYER, settings.enableTicketBuyer);
     dispatch({ tempSettings: settings, type: SETTINGS_CHANGED });
   } else {
     dispatch({ tempSettings: currentSettings, type: SETTINGS_UNCHANGED });

@@ -136,6 +136,12 @@ const darkTheme = {
   // override pi-ui's toggle default dark background
   "toggle-bar-color": "var(--background-copy-color)",
 
+  // override pi-ui's tab colors
+  "tab-default-color": "transparent", // default border
+  "tab-active-background": "var(--background-back-color)",
+  "tab-text-active-color": "var(--input-color-default)",
+  "tab-text-color": "var(--sidebar-menu-link)",
+
   /* icons */
   "menu-settings": "url('style/icons/menuSettingsDark.svg')",
   "menu-accounts": "url('style/icons/accountsActiveDark.svg')",
@@ -246,7 +252,8 @@ const darkTheme = {
     "url('style/icons/decentralizedLoopStillDark.svg')",
   "decentralized-loop-animation":
   "url('style/icons/decentralizedLoopAnimationDark.gif')",
-  "self-transaction-icon": "url('style/icons/sentToSelfTxDark.svg')"
+  "self-transaction-icon": "url('style/icons/sentToSelfTxDark.svg')",
+  "proposals-refresh-icon": "url('style/icons/menuMixerDark.svg')"
 };
 
 export default darkTheme;

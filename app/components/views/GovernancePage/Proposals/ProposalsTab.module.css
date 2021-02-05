@@ -28,11 +28,11 @@
   font-size: 13px;
   line-height: 19px;
   margin-top: 0;
-  width: 460px;
+  width: 560px;
 }
 
 .links {
-  margin-left: 130px;
+  margin-left: 40px;
 }
 
 .links a {
@@ -54,6 +54,20 @@
 
 .politeiaButton:hover {
   background-color: var(--title-text-and-button-background-hovered) !important;
+}
+
+.refreshProposals {
+  width: 24px;
+  height: 24px;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  background-image: var(--proposals-refresh-icon);
+  background-size: 24px 24px;
+  cursor: pointer;
+  position: relative;
+  top: 6px;
+  left: 6px;
 }
 
 .politeiaDisabled {

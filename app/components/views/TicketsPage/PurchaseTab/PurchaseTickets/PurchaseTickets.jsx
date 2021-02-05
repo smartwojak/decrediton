@@ -30,19 +30,19 @@ const Tickets = ({ toggleIsLegacy }) => {
   const [account, setAccount] = useState(defaultSpendingAccount);
   // todo use this vsp to buy solo tickets.
   const [vsp, setVSP] = useState(
-    rememberedVspHost ? { host: rememberedVspHost } : null
+    rememberedVspHost ? { host: rememberedVspHost.host } : null
   );
   const [numTickets, setNumTickets] = useState(1);
   const [isValid, setIsValid] = useState(false);
 
   const toggleRememberVspHostCheckBox = () => {
-    setRememberedVspHost(!rememberedVspHost ? vsp.host : null);
+    setRememberedVspHost(!rememberedVspHost ? vsp : null);
   };
 
   // onChangeNumTickets deals with ticket increment or decrement.
   const onChangeNumTickets = (increment) => {
     if (numTickets === 0 && !increment) return;
-    increment ? setNumTickets(numTickets + 1) : setNumTickets(numTickets - 1);
+    increment ? setNumTickets(parseInt(numTickets) + 1) : setNumTickets(parseInt(numTickets) - 1);
   };
 
   const onV3PurchaseTicket = (passphrase) => {
@@ -66,10 +66,9 @@ const Tickets = ({ toggleIsLegacy }) => {
     }
   };
 
-  const vspFee =
-    availableVSPs &&
+  const [vspFee, setVspFee] = useState(availableVSPs &&
     availableVSPs.find((availableVSP) => availableVSP.host === vsp?.host)
-      ?.vspData.feepercentage;
+      ?.vspData.feepercentage);
 
   return (
     <PurchasePage
@@ -92,6 +91,7 @@ const Tickets = ({ toggleIsLegacy }) => {
         onV3PurchaseTicket,
         vsp,
         vspFee,
+        setVspFee,
         mixedAccount,
         changeAccount,
         isLoading,

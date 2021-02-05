@@ -18,9 +18,11 @@ const GetStarted = ({
   getCurrentBlockCount,
   getNeededBlocks,
   getEstimatedTimeLeft,
-  isTestNet
+  isTestNet,
+  showNavLinks
 }) => (
   <div
+    data-testid="getstarted-pagebody"
     className={classNames(
       styles.pageBody,
       styles.getstarted,
@@ -31,15 +33,17 @@ const GetStarted = ({
         {updateAvailable && (
           <UpdateAvailableLink updateAvailable={updateAvailable} />
         )}
-        <>
-          <AboutModalButton {...{ appVersion, updateAvailable }} />
-          <InvisibleButton onClick={onShowSettings}>
-            <SettingsLinkMsg />
-          </InvisibleButton>
-          <InvisibleButton onClick={onShowLogs}>
-            <LogsLinkMsg />
-          </InvisibleButton>
-        </>
+        <AboutModalButton {...{ appVersion, updateAvailable }} />
+        {showNavLinks && (
+          <>
+            <InvisibleButton onClick={onShowSettings}>
+              <SettingsLinkMsg />
+            </InvisibleButton>
+            <InvisibleButton onClick={onShowLogs}>
+              <LogsLinkMsg />
+            </InvisibleButton>
+          </>
+        )}
       </div>
       {PageComponent &&
         (React.isValidElement(PageComponent) ? (

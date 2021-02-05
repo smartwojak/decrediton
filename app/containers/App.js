@@ -1,5 +1,6 @@
 import { IntlProvider } from "react-intl";
 import { defaultFormats } from "i18n/locales";
+// XXX useTheming already exists in app/hooks
 import { app, theming } from "connectors";
 import { Redirect, Route, Switch } from "react-router-dom";
 import { AnimatedSwitch } from "react-router-transition";
@@ -7,7 +8,7 @@ import { StaticSwitch } from "shared";
 import GetStartedContainer from "./GetStarted";
 import WalletContainer from "./Wallet";
 import ShutdownPage from "components/views/ShutdownPage/ShutdownPage";
-import FatalErrorPage from "components/views/FatalErrorPage";
+import FatalErrorPage from "components/views/FatalErrorPage/FatalErrorPage";
 import Snackbar from "components/Snackbar";
 import AboutModal from "../components/modals/AboutModal/AboutModal";
 import { log } from "wallet";

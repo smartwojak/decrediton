@@ -20,6 +20,7 @@ import {
   VSP_FEE_PROCESS_PAID
 } from "constants";
 import { TICKET, VOTE, VOTED, REVOKED } from "constants/Decrediton";
+import { getNextAddressAttempt } from "./ControlActions";
 export const { TRANSACTION_TYPES } = wallet;
 
 export const GETTRANSACTIONS_CANCEL = "GETTRANSACTIONS_CANCEL";
@@ -45,6 +46,22 @@ function checkAccountsToUpdate(txs, accountsToUpdate) {
   });
   return accountsToUpdate;
 }
+
+// getNewAccountAddresses get accounts which received new inputs and get
+// new addresses for avoiding reuse.
+export const getNewAccountAddresses = (txs) => (dispatch) => {
+  const acctAddressUpdated = [];
+  txs.forEach((tx) => {
+    tx.tx.getCreditsList().forEach((credit) => {
+      const acctNumber = credit.getAccount();
+      // if account address not updated yet, update it
+      if (acctAddressUpdated.find(eq(acctNumber)) === undefined) {
+        acctAddressUpdated.push(acctNumber);
+        dispatch(getNextAddressAttempt(acctNumber));
+      }
+    });
+  });
+};
 
 function checkForStakeTransactions(txs) {
   let stakeTxsFound = false;
@@ -85,14 +102,14 @@ export const newTransactionsReceived = (
     return;
   let {
     unminedTransactions,
+    stakeTransactions,
+    regularTransactions,
     recentRegularTransactions,
     recentStakeTransactions
   } = getState().grpc;
   const {
     walletService,
-    maturingBlockHeights,
-    stakeTransactions,
-    regularTransactions
+    maturingBlockHeights
   } = getState().grpc;
   const chainParams = sel.chainParams(getState());
   // Normalize transactions with missing data.
@@ -117,15 +134,15 @@ export const newTransactionsReceived = (
       : (regularTransactions[v.txHash] = v);
     return m;
   }, {});
-  const newlyUnminedMap = newlyUnminedTransactions.reduce((m, v) => {
-    // update our txs selector value.
-    v.isStake
-      ? (stakeTransactions[v.txHash] = v)
-      : (regularTransactions[v.txHash] = v);
-    m[v.txHash] = v;
-    return m;
-  }, {});
-
+  let newlyUnminedMap = divideTransactions(newlyUnminedTransactions);
+  // update our txs selector value.
+  stakeTransactions = { ...newlyUnminedMap.stakeTransactions, ...stakeTransactions };
+  regularTransactions = { ...newlyUnminedMap.regularTransactions, ...regularTransactions };
+  // flat stake and regular unmined transactions.
+  newlyUnminedMap = {
+    ...newlyUnminedMap.stakeTransactions,
+    ...newlyUnminedMap.regularTransactions
+  };
 
   // get vsp tickets fee status in case there is a stake tx and we show the
   // proper ticket value.
@@ -145,6 +162,9 @@ export const newTransactionsReceived = (
   );
   accountsToUpdate = Array.from(new Set(accountsToUpdate));
   accountsToUpdate.forEach((v) => dispatch(getBalanceUpdateAttempt(v, 0)));
+
+  // get new addresses for accounts which received decred
+  dispatch(getNewAccountAddresses([...newlyUnminedTransactions, ...newlyMinedTransactions]));
 
   // Update mixer accounts balances
   const changeAccount = sel.getChangeAccount(getState());
@@ -216,9 +236,6 @@ export const newTransactionsReceived = (
     type: MATURINGHEIGHTS_CHANGED
   });
 
-  const transactions = [];
-  transactions.push(...newlyUnminedTransactions);
-  transactions.push(...newlyMinedTransactions);
   dispatch({
     recentRegularTransactions,
     recentStakeTransactions,
@@ -830,4 +847,4 @@ export const listUnspentOutputs = (accountNum) => (dispatch, getState) =>
         dispatch({ type: LISTUNSPENTOUTPUTS_FAILED, error });
         reject(error);
       });
-});
+  });

@@ -23,6 +23,7 @@ import {
 } from "./logging";
 import parseArgs from "minimist";
 import { OPTIONS, UPGD_ELECTRON8 } from "constants";
+import * as cfgConstants from "constants/config";
 import os from "os";
 import fs from "fs-extra";
 import util from "util";
@@ -529,8 +530,11 @@ export const launchDCRWallet = (
   let args = [confFile];
 
   // add needed dcrwallet flags
-  args.push("--gaplimit=" + cfg.get("gaplimit"));
+  args.push("--gaplimit=" + cfg.get(cfgConstants.GAP_LIMIT));
   args.push("--issueclientcert");
+
+  // example of debug level case needed
+  // args.push("--debuglevel=VSPC=debug")
 
   // add cspp cert path.
   // When in mainnet, we always include it, because if we doensn't and a user

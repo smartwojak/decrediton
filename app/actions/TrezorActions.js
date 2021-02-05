@@ -10,6 +10,7 @@ import {
 } from "helpers/trezor";
 import { publishTransactionAttempt } from "./ControlActions";
 import { model1_decred_homescreen, modelT_decred_homescreen } from "constants/trezor";
+import * as cfgConstants from "constants/config";
 import { getWalletCfg } from "config";
 import { EXTERNALREQUEST_TREZOR_BRIDGE } from "main_dev/externalRequests";
 import {
@@ -45,7 +46,7 @@ export const enableTrezor = () => (dispatch, getState) => {
 
   if (walletName) {
     const config = getWalletCfg(selectors.isTestNet(getState()), walletName);
-    config.set("trezor", true);
+    config.set(cfgConstants.TREZOR, true);
   }
 
   dispatch({ type: TRZ_TREZOR_ENABLED });
@@ -791,18 +792,16 @@ export const updateFirmware = (path) => async (dispatch, getState) => {
 
   dispatch({ type: TRZ_UPDATEFIRMWARE_ATTEMPT });
 
-  if (noDevice(getState)) {
-    dispatch({
-      error: "Device not connected",
-      type: TRZ_UPDATEFIRMWARE_FAILED
+  const features = await getFeatures(dispatch, getState)
+    .catch(error => {
+      dispatch({ error, type: TRZ_UPDATEFIRMWARE_FAILED });
+      return;
     });
-    return;
-  }
 
   try {
     if (device != BOOTLOADER_MODE) throw "device must be in bootloader mode";
     // Ask main.development.js to send the firmware for us.
-    const { error, started } = await ipcRenderer.invoke("upload-firmware", path);
+    const { error, started } = await ipcRenderer.invoke("upload-firmware", path, features.model);
     // If the updated started, the device must be disconnected before further
     // use.
     if (started) alertNoConnectedDevice()(dispatch);

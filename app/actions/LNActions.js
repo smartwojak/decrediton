@@ -5,6 +5,7 @@ import { ipcRenderer } from "electron";
 import { getWalletCfg } from "../config";
 import { getWalletPath } from "main_dev/paths";
 import { getNextAccountAttempt } from "./ControlActions";
+import * as cfgConstants from "constants/config";
 
 export const CLOSETYPE_COOPERATIVE_CLOSE = 0;
 export const CLOSETYPE_LOCAL_FORCE_CLOSE = 1;
@@ -284,18 +285,46 @@ const connectToLNWallet = (
     return { client };
   }
 
-  const lnClient = await ln.getLightningClient(
-    address,
-    port,
-    certPath,
-    macaroonPath
-  );
-  const wtClient = await ln.getWatchtowerClient(
-    address,
-    port,
-    certPath,
-    macaroonPath
-  );
+  const sleepMs = 3000;
+  const sleepCount = 60 / (sleepMs / 1000);
+  const sleep = () => new Promise((resolve) => setTimeout(resolve, sleepMs));
+
+  // Attempt to connect to the lnrpc service of the wallet. Since the underlying
+  // gRPC service of the dcrlnd node is restarted after it's unlocked, we might
+  // need to try a few times until we get a proper connection.
+  let lnClient, wtClient;
+  let lastError;
+  for (let i = 0; i < sleepCount; i++) {
+    try {
+      lnClient = await ln.getLightningClient(
+        address,
+        port,
+        certPath,
+        macaroonPath
+      );
+      wtClient = await ln.getWatchtowerClient(
+        address,
+        port,
+        certPath,
+        macaroonPath
+      );
+
+      // Force a getInfo call to ensure we're connected and the server provides
+      // the Lightning service.
+      await ln.getInfo(lnClient);
+      lastError = null;
+      break;
+    } catch (error) {
+        // An unimplemented error here probably means dcrlnd was just unlocked
+        // and is currently starting up the services. Wait a bit and try again.
+        if (error.code !== 12) { // 12 === UNIMPLEMENTED.
+          throw error;
+        }
+        lastError = error;
+        await sleep();
+    }
+  }
+  if (lastError) throw lastError;
 
   // Ensure the dcrlnd instance and decrediton are connected to the same(ish)
   // wallet. For this test to fail the user would have had to manually change a
@@ -319,8 +348,8 @@ const connectToLNWallet = (
   const addrAccount = validResp.getAccountNumber();
   if (addrAccount != account) {
     throw new Error(
-      "Wallet returned that address is not from the ln account; account=" +
-        addrAccount
+      `Wallet returned that address is not from the ln account; account=
+      ${addrAccount}`
     );
   }
 
@@ -873,8 +902,8 @@ const getLNWalletConfig = () => (dispatch, getState) => {
   } = getState();
   const cfg = getWalletCfg(sel.isTestNet(getState()), walletName);
   return {
-    walletExists: cfg.get("ln_wallet_exists"),
-    account: cfg.get("ln_account")
+    walletExists: cfg.get(cfgConstants.LN_WALLET_EXISTS),
+    account: cfg.get(cfgConstants.LN_ACCOUNT)
   };
 };
 
@@ -883,8 +912,8 @@ const setLNWalletConfig = (account) => (dispatch, getState) => {
     daemon: { walletName }
   } = getState();
   const cfg = getWalletCfg(sel.isTestNet(getState()), walletName);
-  cfg.set("ln_wallet_exists", true);
-  cfg.set("ln_account", account);
+  cfg.set(cfgConstants.LN_WALLET_EXISTS, true);
+  cfg.set(cfgConstants.LN_ACCOUNT, account);
 };
 
 export const LNWALLET_SCBINFO_UPDATED = "LNWALLET_SCBINFO_UPDATED";

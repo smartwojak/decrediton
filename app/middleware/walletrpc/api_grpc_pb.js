@@ -1,7 +1,6 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
-var grpc = require('grpc');
 var api_pb = require('./api_pb.js');
 
 function serialize_walletrpc_AbandonTransactionRequest(arg) {
@@ -915,6 +914,50 @@ function serialize_walletrpc_PingResponse(arg) {
 
 function deserialize_walletrpc_PingResponse(buffer_arg) {
   return api_pb.PingResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_walletrpc_ProcessManagedTicketsRequest(arg) {
+  if (!(arg instanceof api_pb.ProcessManagedTicketsRequest)) {
+    throw new Error('Expected argument of type walletrpc.ProcessManagedTicketsRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_walletrpc_ProcessManagedTicketsRequest(buffer_arg) {
+  return api_pb.ProcessManagedTicketsRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_walletrpc_ProcessManagedTicketsResponse(arg) {
+  if (!(arg instanceof api_pb.ProcessManagedTicketsResponse)) {
+    throw new Error('Expected argument of type walletrpc.ProcessManagedTicketsResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_walletrpc_ProcessManagedTicketsResponse(buffer_arg) {
+  return api_pb.ProcessManagedTicketsResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_walletrpc_ProcessUnmanagedTicketsRequest(arg) {
+  if (!(arg instanceof api_pb.ProcessUnmanagedTicketsRequest)) {
+    throw new Error('Expected argument of type walletrpc.ProcessUnmanagedTicketsRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_walletrpc_ProcessUnmanagedTicketsRequest(buffer_arg) {
+  return api_pb.ProcessUnmanagedTicketsRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_walletrpc_ProcessUnmanagedTicketsResponse(arg) {
+  if (!(arg instanceof api_pb.ProcessUnmanagedTicketsResponse)) {
+    throw new Error('Expected argument of type walletrpc.ProcessUnmanagedTicketsResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_walletrpc_ProcessUnmanagedTicketsResponse(buffer_arg) {
+  return api_pb.ProcessUnmanagedTicketsResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_walletrpc_PublishTransactionRequest(arg) {
@@ -1886,7 +1929,7 @@ function deserialize_walletrpc_WalletExistsResponse(buffer_arg) {
 }
 
 
-var VersionServiceService = exports.VersionServiceService = {
+var VersionServiceService = exports['walletrpc.VersionService'] = {
   version: {
     path: '/walletrpc.VersionService/Version',
     requestStream: false,
@@ -1900,8 +1943,7 @@ var VersionServiceService = exports.VersionServiceService = {
   },
 };
 
-exports.VersionServiceClient = grpc.makeGenericClientConstructor(VersionServiceService);
-var WalletServiceService = exports.WalletServiceService = {
+var WalletServiceService = exports['walletrpc.WalletService'] = {
   // Queries
 ping: {
     path: '/walletrpc.WalletService/Ping',
@@ -2510,10 +2552,31 @@ changePassphrase: {
     responseSerialize: serialize_walletrpc_GetVSPTicketsByFeeStatusResponse,
     responseDeserialize: deserialize_walletrpc_GetVSPTicketsByFeeStatusResponse,
   },
+  processManagedTickets: {
+    path: '/walletrpc.WalletService/ProcessManagedTickets',
+    requestStream: false,
+    responseStream: false,
+    requestType: api_pb.ProcessManagedTicketsRequest,
+    responseType: api_pb.ProcessManagedTicketsResponse,
+    requestSerialize: serialize_walletrpc_ProcessManagedTicketsRequest,
+    requestDeserialize: deserialize_walletrpc_ProcessManagedTicketsRequest,
+    responseSerialize: serialize_walletrpc_ProcessManagedTicketsResponse,
+    responseDeserialize: deserialize_walletrpc_ProcessManagedTicketsResponse,
+  },
+  processUnmanagedTickets: {
+    path: '/walletrpc.WalletService/ProcessUnmanagedTickets',
+    requestStream: false,
+    responseStream: false,
+    requestType: api_pb.ProcessUnmanagedTicketsRequest,
+    responseType: api_pb.ProcessUnmanagedTicketsResponse,
+    requestSerialize: serialize_walletrpc_ProcessUnmanagedTicketsRequest,
+    requestDeserialize: deserialize_walletrpc_ProcessUnmanagedTicketsRequest,
+    responseSerialize: serialize_walletrpc_ProcessUnmanagedTicketsResponse,
+    responseDeserialize: deserialize_walletrpc_ProcessUnmanagedTicketsResponse,
+  },
 };
 
-exports.WalletServiceClient = grpc.makeGenericClientConstructor(WalletServiceService);
-var WalletLoaderServiceService = exports.WalletLoaderServiceService = {
+var WalletLoaderServiceService = exports['walletrpc.WalletLoaderService'] = {
   walletExists: {
     path: '/walletrpc.WalletLoaderService/WalletExists',
     requestStream: false,
@@ -2604,8 +2667,7 @@ var WalletLoaderServiceService = exports.WalletLoaderServiceService = {
   },
 };
 
-exports.WalletLoaderServiceClient = grpc.makeGenericClientConstructor(WalletLoaderServiceService);
-var AccountMixerServiceService = exports.AccountMixerServiceService = {
+var AccountMixerServiceService = exports['walletrpc.AccountMixerService'] = {
   runAccountMixer: {
     path: '/walletrpc.AccountMixerService/RunAccountMixer',
     requestStream: false,
@@ -2619,8 +2681,7 @@ var AccountMixerServiceService = exports.AccountMixerServiceService = {
   },
 };
 
-exports.AccountMixerServiceClient = grpc.makeGenericClientConstructor(AccountMixerServiceService);
-var TicketBuyerV2ServiceService = exports.TicketBuyerV2ServiceService = {
+var TicketBuyerV2ServiceService = exports['walletrpc.TicketBuyerV2Service'] = {
   runTicketBuyer: {
     path: '/walletrpc.TicketBuyerV2Service/RunTicketBuyer',
     requestStream: false,
@@ -2634,8 +2695,7 @@ var TicketBuyerV2ServiceService = exports.TicketBuyerV2ServiceService = {
   },
 };
 
-exports.TicketBuyerV2ServiceClient = grpc.makeGenericClientConstructor(TicketBuyerV2ServiceService);
-var TicketBuyerServiceService = exports.TicketBuyerServiceService = {
+var TicketBuyerServiceService = exports['walletrpc.TicketBuyerService'] = {
   startAutoBuyer: {
     path: '/walletrpc.TicketBuyerService/StartAutoBuyer',
     requestStream: false,
@@ -2770,8 +2830,7 @@ var TicketBuyerServiceService = exports.TicketBuyerServiceService = {
   },
 };
 
-exports.TicketBuyerServiceClient = grpc.makeGenericClientConstructor(TicketBuyerServiceService);
-var SeedServiceService = exports.SeedServiceService = {
+var SeedServiceService = exports['walletrpc.SeedService'] = {
   generateRandomSeed: {
     path: '/walletrpc.SeedService/GenerateRandomSeed',
     requestStream: false,
@@ -2796,8 +2855,7 @@ var SeedServiceService = exports.SeedServiceService = {
   },
 };
 
-exports.SeedServiceClient = grpc.makeGenericClientConstructor(SeedServiceService);
-var AgendaServiceService = exports.AgendaServiceService = {
+var AgendaServiceService = exports['walletrpc.AgendaService'] = {
   agendas: {
     path: '/walletrpc.AgendaService/Agendas',
     requestStream: false,
@@ -2811,8 +2869,7 @@ var AgendaServiceService = exports.AgendaServiceService = {
   },
 };
 
-exports.AgendaServiceClient = grpc.makeGenericClientConstructor(AgendaServiceService);
-var VotingServiceService = exports.VotingServiceService = {
+var VotingServiceService = exports['walletrpc.VotingService'] = {
   voteChoices: {
     path: '/walletrpc.VotingService/VoteChoices',
     requestStream: false,
@@ -2837,8 +2894,7 @@ var VotingServiceService = exports.VotingServiceService = {
   },
 };
 
-exports.VotingServiceClient = grpc.makeGenericClientConstructor(VotingServiceService);
-var MessageVerificationServiceService = exports.MessageVerificationServiceService = {
+var MessageVerificationServiceService = exports['walletrpc.MessageVerificationService'] = {
   verifyMessage: {
     path: '/walletrpc.MessageVerificationService/VerifyMessage',
     requestStream: false,
@@ -2852,8 +2908,7 @@ var MessageVerificationServiceService = exports.MessageVerificationServiceServic
   },
 };
 
-exports.MessageVerificationServiceClient = grpc.makeGenericClientConstructor(MessageVerificationServiceService);
-var NetworkServiceService = exports.NetworkServiceService = {
+var NetworkServiceService = exports['walletrpc.NetworkService'] = {
   getRawBlock: {
     path: '/walletrpc.NetworkService/GetRawBlock',
     requestStream: false,
@@ -2867,8 +2922,7 @@ var NetworkServiceService = exports.NetworkServiceService = {
   },
 };
 
-exports.NetworkServiceClient = grpc.makeGenericClientConstructor(NetworkServiceService);
-var DecodeMessageServiceService = exports.DecodeMessageServiceService = {
+var DecodeMessageServiceService = exports['walletrpc.DecodeMessageService'] = {
   decodeRawTransaction: {
     path: '/walletrpc.DecodeMessageService/DecodeRawTransaction',
     requestStream: false,
@@ -2882,4 +2936,3 @@ var DecodeMessageServiceService = exports.DecodeMessageServiceService = {
   },
 };
 
-exports.DecodeMessageServiceClient = grpc.makeGenericClientConstructor(DecodeMessageServiceService);
